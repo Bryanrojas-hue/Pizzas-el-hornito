@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>El Hornito - Las Pizzas que Encienden tu Día</title>
+    <!-- Carga de Tailwind CSS para estilos modernos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Define la animación del fondo dinámico */
+        @keyframes gradient-shift {
+            0% { background-position: 0% 50; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .dynamic-bg {
+            /* Degradado más CLARO con colores cálidos y suaves (crema, coral claro, melocotón) */
+            background: linear-gradient(-45deg, #fffde7, #fff8e1, #ffecb3, #ffe0b2);
+            background-size: 400% 400%;
+            animation: gradient-shift 25s ease infinite; /* Animación más lenta y continua */
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Estilo para asegurar que el contenido se lea bien sobre el fondo */
+        .card-bg {
+            background-color: rgba(255, 255, 255, 0.98); /* Fondo casi opaco para las tarjetas */
+        }
+
+        /* Estilo para los modales */
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+        }
+
+        /* Estilo unificado para los botones de ordenar */
+        .order-btn {
+            @apply w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg shadow-md transition duration-300 mt-4;
+            /* Añade un sutil efecto de sombra y lift al hacer hover */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        .order-btn:hover {
+            box-shadow: 0 10px 15px -3px rgba(220, 38, 38, 0.3), 0 4px 6px -4px rgba(220, 38, 38, 0.2);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body class="dynamic-bg">
+
+    <!-- Encabezado Fijo y Llamativo -->
+    <header class="bg-red-700 bg-opacity-95 p-6 shadow-2xl text-white sticky top-0 z-20">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <h1 class="text-4xl font-extrabold tracking-tight">El Hornito 🍕</h1>
+            <nav>
+                <a href="#menu" class="text-white hover:text-yellow-300 transition duration-300 font-semibold text-lg">Nuestro Menú</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Sección Principal del Menú -->
+    <main id="menu" class="py-16 px-4">
+        <div class="max-w-6xl mx-auto">
+            <!-- Título ahora en color oscuro para el fondo claro -->
+            <h2 class="text-center text-5xl font-bold mb-12 text-gray-800 drop-shadow-md">¡Nuestras Especialidades Calientes!</h2>
+            
+            <!-- Grid de Pizzas Responsive -->
+            <div class="grid gap-10 md:grid-cols-2 lg:grid-cols-3">
+
+                <!-- Bloque de Lógica JavaScript -->
+                <script>
+                    
+                    // --- HELPERS Y LÓGICA DE INTERACCIÓN ---
+
+                    // 1. Renderiza los botones de tamaño
+                    const renderSizes = (availableSizes) => {
+                        const allSizes = [
+                            { name: 'Individual', key: 'S', color: 'blue' },
+                            { name: 'Mediana', key: 'M', color: 'red' },
+                            { name: 'Familiar', key: 'L', color: 'yellow' }
+                        ];
+                        
+                        let html = '<div class="size-options flex flex-wrap justify-center my-3">';
+                        allSizes.forEach(size => {
+                            const isAvailable = availableSizes.includes(size.key);
+                            // Usamos el color base-200 para el estado no seleccionado
+                            const baseClasses = "size-btn inline-flex items-center rounded-full px-3 py-1 text-sm font-bold mr-2 mb-2 transition duration-150 transform hover:scale-105 active:scale-95";
+
+                            if (isAvailable) {
+                                html += `<button type="button" 
+                                             class="${baseClasses} bg-${size.color}-200 text-${size.color}-800"
+                                             data-size-key="${size.key}"
+                                             data-size-name="${size.name}">
+                                             ${size.name}
+                                         </button>`;
+                            } else {
+                                html += `<span class="${baseClasses} bg-gray-200 text-gray-400 line-through cursor-not-allowed">${size.name}</span>`;
+                            }
+                        });
+                        html += '</div>';
+                        return html;
+                    };
+
+                    // 2. Maneja el evento de selección de tamaño
+                    const handleSizeSelection = (button) => {
+                        const card = button.closest('.pizza-card');
+                        const selectedKey = button.getAttribute('data-size-key');
+                        const selectedName = button.getAttribute('data-size-name');
+                        
+                        // 1. Quitar la selección anterior de todos los botones en la tarjeta
+                        card.querySelectorAll('.size-btn').forEach(btn => {
+                            // Extrae el color del botón para quitar las clases específicas de selección
+                            const match = btn.className.match(/text-(\w+)-800/);
+                            if (match) {
+                                const btnColor = match[1];
+                                btn.classList.remove(`bg-${btnColor}-600`, 'text-white', 'ring-2', 'ring-offset-2', 'ring-white');
+                                btn.classList.add(`bg-${btnColor}-200`);
+                            }
+                        });
+
+                        // 2. Establecer la nueva selección (destacar el botón)
+                        const colorMatch = button.className.match(/text-(\w+)-800/);
+                        if (colorMatch) {
+                            const color = colorMatch[1];
+                            button.classList.remove(`bg-${color}-200`);
+                            // El color de fondo pasa a 600, el texto a blanco, y se añade un ring para visibilidad
+                            button.classList.add(`bg-${color}-600`, 'text-white', 'ring-2', 'ring-offset-2', 'ring-white');
+                        }
+
+
+                        // 3. Guardar el tamaño seleccionado en la tarjeta (para que el botón de ordenar lo lea)
+                        card.setAttribute('data-selected-size', selectedKey);
+                        card.setAttribute('data-selected-size-name', selectedName);
+                    };
+
+                    // 3. Muestra el modal de confirmación de orden y simula el envío del pedido
+                    const showOrderModal = (pizzaName, sizeName) => {
+                        // Simulación de envío de pedido/añadir a carrito - Muestra la orden en la consola.
+                        console.log(`--- PEDIDO RECIBIDO ---`);
+                        console.log(`Pizza: ${pizzaName}`);
+                        console.log(`Tamaño: ${sizeName}`);
+                        console.log(`Estado: Procesando en El Hornito...`);
+
+                        const modal = document.getElementById('order-modal');
+                        const message = document.getElementById('modal-message');
+                        message.textContent = `¡Tu pizza ${pizzaName} en tamaño ${sizeName} ha sido agregada al pedido! ¡Hornito la enciende ya!`;
+                        modal.classList.remove('hidden');
+                    };
+
+                    // 4. Muestra el modal de advertencia (si falta el tamaño)
+                    const showWarningModal = (pizzaName) => {
+                        const modal = document.getElementById('warning-modal');
+                        const message = document.getElementById('warning-message');
+                        message.textContent = `🚨 ¡Espera! Por favor, selecciona un tamaño para la pizza "${pizzaName}" antes de ordenar.`;
+                        modal.classList.remove('hidden');
+                    };
+
+                    // 5. Cierra el modal de confirmación
+                    const hideOrderModal = () => {
+                        document.getElementById('order-modal').classList.add('hidden');
+                    };
+                    
+                    // 6. Cierra el modal de advertencia
+                    const hideWarningModal = () => {
+                         document.getElementById('warning-modal').classList.add('hidden');
+                    };
+
+                    // 7. Fallback para imágenes rotas (Placeholders)
+                    const imageFallback = (img, text) => {
+                        img.onerror = null; 
+                        img.src = `https://placehold.co/400x224/fef3c7/b45309?text=${encodeURIComponent(text.replace(/\s/g, '+'))}`;
+                        img.classList.add('p-8');
+                    };
+
+                    // 8. Inicialización de Eventos (Se ejecuta al cargar la página)
+                    window.onload = () => {
+                        
+                        // Configurar botones de TAMAÑO
+                        document.querySelectorAll('.size-btn').forEach(button => {
+                            button.addEventListener('click', () => {
+                                handleSizeSelection(button);
+                            });
+                        });
+                        
+                        // Configurar botones de ORDENAR AHORA
+                        document.querySelectorAll('.order-btn').forEach(button => {
+                            button.addEventListener('click', (event) => {
+                                const card = event.currentTarget.closest('.pizza-card');
+                                const pizzaName = event.currentTarget.getAttribute('data-pizza-name');
+                                const selectedSizeName = card.getAttribute('data-selected-size-name');
+
+                                if (selectedSizeName) {
+                                    showOrderModal(pizzaName, selectedSizeName);
+                                } else {
+                                    showWarningModal(pizzaName);
+                                }
+                            });
+                        });
+
+                        // Configurar cierres de modales
+                        document.getElementById('close-modal-btn').addEventListener('click', hideOrderModal);
+                        document.getElementById('close-warning-btn').addEventListener('click', hideWarningModal);
+                    };
+                </script>
+                
+                <!-- Pizza Card 1: Pepperoni -->
+                <div class="card-bg rounded-xl shadow-2xl overflow-hidden transform hover:scale-[1.02] transition duration-300 hover:shadow-red-300 pizza-card">
+                    <!-- Placeholder de imagen: Fondo rojo pepperoni -->
+                    <img src="peperoni.webp" 
+                         alt="[Imagen de Pizza Pepperoni]" 
+                         class="w-full h-56 object-cover border-b-4 border-red-500"
+                         onerror="imageFallback(this, 'Pepperoni Clasico')">
+                    <div class="p-6 text-center">
+                        <h3 class="text-3xl font-bold text-red-700 mb-2">Pepperoni Clásico</h3>
+                        <p class="text-gray-600 mb-3">
+                            La favorita sin rival. Generosas rodajas de **pepperoni** sobre queso mozzarella fundido y nuestra salsa secreta.
+                        </p>
+                        <div id="sizes-pepperoni"></div>
+                        <script>document.getElementById('sizes-pepperoni').innerHTML = renderSizes(['S', 'M', 'L']);</script>
+                        
+                        <button class="order-btn" data-pizza-name="Pepperoni Clásico">
+                            ¡Ordenar Ahora!
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pizza Card 2: Margarita -->
+                <div class="card-bg rounded-xl shadow-2xl overflow-hidden transform hover:scale-[1.02] transition duration-300 hover:shadow-green-300 pizza-card">
+                    <!-- Placeholder de imagen: Fondo verde margarita -->
+                    <img src="margarita.webp" 
+                         alt="[Imagen de Pizza Margarita]" 
+                         class="w-full h-56 object-cover border-b-4 border-green-500"
+                         onerror="imageFallback(this, 'Margarita Tradicional')">
+                    <div class="p-6 text-center">
+                        <h3 class="text-3xl font-bold text-green-700 mb-2">Margarita Tradicional</h3>
+                        <p class="text-gray-600 mb-3">
+                            La sencillez de Italia. Tomate, mozzarella fresca, y hojas de **albahaca** aromática. Un clásico ligero y fresco.
+                        </p>
+                        <div id="sizes-margarita"></div>
+                        <script>document.getElementById('sizes-margarita').innerHTML = renderSizes(['S', 'M', 'L']);</script>
+                        
+                        <button class="order-btn" data-pizza-name="Margarita Tradicional">
+                            ¡Ordenar Ahora!
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pizza Card 3: Cuatro Quesos -->
+                <div class="card-bg rounded-xl shadow-2xl overflow-hidden transform hover:scale-[1.02] transition duration-300 hover:shadow-yellow-300 pizza-card">
+                    <!-- Placeholder de imagen: Fondo amarillo quesos -->
+                    <img src="4 quesos.webp" 
+                         alt="[Imagen de Pizza Cuatro Quesos]" 
+                         class="w-full h-56 object-cover border-b-4 border-yellow-500"
+                         onerror="imageFallback(this, 'Cuatro Quesos Gourmet')">
+                    <div class="p-6 text-center">
+                        <h3 class="text-3xl font-bold text-yellow-700 mb-2">Cuatro Quesos Gourmet</h3>
+                        <p class="text-gray-600 mb-3">
+                            Una sinfonía de sabores cremosos: mozzarella, provolone, parmesano y un toque de **queso azul**. Máximo placer.
+                        </p>
+                        <div id="sizes-quesos"></div>
+                        <script>document.getElementById('sizes-quesos').innerHTML = renderSizes(['M', 'L']);</script>
+                        
+                        <button class="order-btn" data-pizza-name="Cuatro Quesos Gourmet">
+                            ¡Ordenar Ahora!
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pizza Card 4: Vegetariana (Jardín Fresco) -->
+                <div class="card-bg rounded-xl shadow-2xl overflow-hidden transform hover:scale-[1.02] transition duration-300 hover:shadow-lime-300 pizza-card">
+                    <!-- Placeholder de imagen: Fondo verde lima -->
+                    <img src="jardin fresco.webp" 
+                         alt="[Imagen de Pizza Vegetariana]" 
+                         class="w-full h-56 object-cover border-b-4 border-lime-500"
+                         onerror="imageFallback(this, 'Jardin Fresco')">
+                    <div class="p-6 text-center">
+                        <h3 class="text-3xl font-bold text-lime-700 mb-2">Jardín Fresco</h3>
+                        <p class="text-gray-600 mb-3">
+                            Cargada de pimientos, champiñones, cebolla morada, y olivas negras. Una opción saludable y llena de **vitaminas** y sabor.
+                        </p>
+                        <div id="sizes-vegetariana"></div>
+                        <script>document.getElementById('sizes-vegetariana').innerHTML = renderSizes(['S', 'M']);</script>
+                        
+                        <button class="order-btn" data-pizza-name="Jardín Fresco">
+                            ¡Ordenar Ahora!
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pizza Card 5: Marinara (Vegana) -->
+                <div class="card-bg rounded-xl shadow-2xl overflow-hidden transform hover:scale-[1.02] transition duration-300 hover:shadow-blue-300 pizza-card">
+                    <!-- Placeholder de imagen: Fondo azul oscuro -->
+                    <img src="vegana.webp" 
+                         alt="[Imagen de Pizza Marinara]" 
+                         class="w-full h-56 object-cover border-b-4 border-blue-500"
+                         onerror="imageFallback(this, 'Marinara Vegana')">
+                    <div class="p-6 text-center">
+                        <h3 class="text-3xl font-bold text-blue-700 mb-2">Marinara (Vegana)</h3>
+                        <p class="text-gray-600 mb-3">
+                            La esencia napolitana: tomate, ajo, orégano y aceite de oliva. **No lleva queso**, resaltando el sabor de los ingredientes simples.
+                        </p>
+                        <div id="sizes-marinara"></div>
+                        <script>document.getElementById('sizes-marinara').innerHTML = renderSizes(['S', 'M']);</script>
+                        
+                        <button class="order-btn" data-pizza-name="Marinara (Vegana)">
+                            ¡Ordenar Ahora!
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pizza Card 6: Pollo BBQ -->
+                <div class="card-bg rounded-xl shadow-2xl overflow-hidden transform hover:scale-[1.02] transition duration-300 hover:shadow-amber-300 pizza-card">
+                    <!-- Placeholder de imagen: Fondo marrón ahumado -->
+                    <img src="pollo.webp" 
+                         alt="[Imagen de Pizza Pollo BBQ]" 
+                         class="w-full h-56 object-cover border-b-4 border-amber-800"
+                         onerror="imageFallback(this, 'Pollo BBQ Ahumado')">
+                    <div class="p-6 text-center">
+                        <h3 class="text-3xl font-bold text-amber-800 mb-2">Pollo BBQ Ahumado</h3>
+                        <p class="text-gray-600 mb-3">
+                            Trozos tiernos de pollo a la parrilla, salsa BBQ dulce y ahumada, y cebolla caramelizada. Una delicia con sabor a **parrilla**.
+                        </p>
+                        <div id="sizes-bbq"></div>
+                        <script>document.getElementById('sizes-bbq').innerHTML = renderSizes(['M', 'L']);</script>
+                        
+                        <button class="order-btn" data-pizza-name="Pollo BBQ Ahumado">
+                            ¡Ordenar Ahora!
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pizza Card 7: Champiñones y Trufa -->
+                <div class="card-bg rounded-xl shadow-2xl overflow-hidden transform hover:scale-[1.02] transition duration-300 hover:shadow-stone-300 pizza-card">
+                    <!-- Placeholder de imagen: Fondo gris piedra -->
+                    <img src="champinon.webp" 
+                         alt="[Imagen de Pizza Champiñones y Trufa]" 
+                         class="w-full h-56 object-cover border-b-4 border-stone-500"
+                         onerror="imageFallback(this, 'Champinones y Trufa')">
+                    <div class="p-6 text-center">
+                        <h3 class="text-3xl font-bold text-stone-700 mb-2">Champiñones y Trufa</h3>
+                        <p class="text-gray-600 mb-3">
+                            Pizza blanca (sin tomate) con una base de queso ricotta, setas frescas y un delicado toque de **aceite de trufa**. Exquisita.
+                        </p>
+                        <div id="sizes-funghi"></div>
+                        <script>document.getElementById('sizes-funghi').innerHTML = renderSizes(['M', 'L']);</script>
+                        
+                        <button class="order-btn" data-pizza-name="Champiñones y Trufa">
+                            ¡Ordenar Ahora!
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pizza Card 8: Pesto y Camarones -->
+                <div class="card-bg rounded-xl shadow-2xl overflow-hidden transform hover:scale-[1.02] transition duration-300 hover:shadow-cyan-300 pizza-card">
+                    <!-- Placeholder de imagen: Fondo cian/marino -->
+                    <img src="Pizza-de-Camarones.jpg" 
+                         alt="[Imagen de Pizza Pesto y Camarones]" 
+                         class="w-full h-56 object-cover border-b-4 border-cyan-500"
+                         onerror="imageFallback(this, 'Pesto y Camarones')">
+                    <div class="p-6 text-center">
+                        <h3 class="text-3xl font-bold text-cyan-700 mb-2">Pesto y Camarones</h3>
+                        <p class="text-gray-600 mb-3">
+                            Base de salsa pesto casera, mozzarella, y suculentos **camarones** sazonados. Una opción de mar y tierra.
+                        </p>
+                        <div id="sizes-pesto"></div>
+                        <script>document.getElementById('sizes-pesto').innerHTML = renderSizes(['S', 'M']);</script>
+                        
+                        <button class="order-btn" data-pizza-name="Pesto y Camarones">
+                            ¡Ordenar Ahora!
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pizza Card 9: Súper Carnívora -->
+                <div class="card-bg rounded-xl shadow-2xl overflow-hidden transform hover:scale-[1.02] transition duration-300 hover:shadow-red-900 pizza-card">
+                    <!-- Placeholder de imagen: Fondo rojo oscuro -->
+                    <img src="carnivora.webp" 
+                         alt="[Imagen de Pizza Súper Carnívora]" 
+                         class="w-full h-56 object-cover border-b-4 border-red-900"
+                         onerror="imageFallback(this, 'Super Carnivora')">
+                    <div class="p-6 text-center">
+                        <h3 class="text-3xl font-bold text-red-900 mb-2">Súper Carnívora</h3>
+                        <p class="text-gray-600 mb-3">
+                            Para los más hambrientos: pepperoni, salchicha italiana, jamón y tocino. Una bomba de **proteína** y sabor.
+                        </p>
+                        <div id="sizes-carnivora"></div>
+                        <script>document.getElementById('sizes-carnivora').innerHTML = renderSizes(['M', 'L']);</script>
+                        
+                        <button class="order-btn" data-pizza-name="Súper Carnívora">
+                            ¡Ordenar Ahora!
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal 1: Confirmación de Orden (Oculto por defecto) -->
+    <div id="order-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-overlay">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-11/12 max-w-sm transform transition duration-300 scale-100">
+            <div class="flex flex-col items-center">
+                <svg class="w-16 h-16 text-red-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2m-4 2l4 4m0 0l-4 4m4-4H9"></path>
+                </svg>
+                <h3 class="text-2xl font-bold text-gray-800 mb-3">¡Orden Recibida!</h3>
+                <p id="modal-message" class="text-center text-gray-600 mb-6 font-semibold"></p>
+                <button id="close-modal-btn" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-full shadow-md transition duration-300">
+                    ¡Gracias!
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal 2: Advertencia de Tamaño No Seleccionado (Oculto por defecto) -->
+    <div id="warning-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-overlay">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-11/12 max-w-sm transform transition duration-300 scale-100 border-4 border-yellow-500">
+            <div class="flex flex-col items-center">
+                <svg class="w-16 h-16 text-yellow-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 3c-.77-1.333-2.694-1.333-3.464 0L3.332 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+                <h3 class="text-2xl font-bold text-yellow-700 mb-3">Advertencia de Pedido</h3>
+                <p id="warning-message" class="text-center text-gray-700 mb-6 font-semibold"></p>
+                <button id="close-warning-btn" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold py-2 px-6 rounded-full shadow-md transition duration-300">
+                    Aceptar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pie de Página -->
+    <footer class="bg-gray-800 bg-opacity-90 text-white text-center py-6 mt-12 z-10">
+        <p class="text-lg">&copy; 2024 El Hornito. Calidad y sabor en cada mordida. 🔥</p>
+    </footer>
+
+</body>
+</html>
